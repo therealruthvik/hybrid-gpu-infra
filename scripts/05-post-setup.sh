@@ -5,12 +5,16 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo "==> Waiting for gpu-worker to be Ready..."
-kubectl wait node/gpu-worker --for=condition=Ready --timeout=300s
+# Auto-detect GPU worker node (non-control-plane node)
+GPU_NODE=$(kubectl get nodes --no-headers | grep -v control-plane | awk '{print $1}' | head -1)
+echo "==> GPU worker node detected: ${GPU_NODE}"
 
-echo "==> Labeling and tainting gpu-worker..."
-kubectl label node gpu-worker node-role=gpu-worker accelerator=nvidia-a10 --overwrite
-kubectl taint node gpu-worker gpu=true:NoSchedule --overwrite
+echo "==> Waiting for ${GPU_NODE} to be Ready..."
+kubectl wait node/"${GPU_NODE}" --for=condition=Ready --timeout=300s
+
+echo "==> Labeling and tainting ${GPU_NODE}..."
+kubectl label node "${GPU_NODE}" node-role=gpu-worker accelerator=nvidia-a10 --overwrite
+kubectl taint node "${GPU_NODE}" gpu=true:NoSchedule --overwrite
 
 echo "==> Installing GPU Operator (driver.enabled=false)..."
 helm repo add nvidia https://helm.ngc.nvidia.com/nvidia
