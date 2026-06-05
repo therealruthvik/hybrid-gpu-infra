@@ -4,14 +4,14 @@ metadata:
   name: default
 spec:
   calicoNetwork:
+    nodeAddressAutodetectionV4:
+      interface: tailscale0
     ipPools:
     - blockSize: 26
       cidr: 192.168.0.0/16
       encapsulation: VXLANCrossSubnet
       natOutgoing: Enabled
       nodeSelector: all()
-  nodeAddressAutodetectionV4:
-    interface: tailscale0
 ---
 apiVersion: operator.tigera.io/v1
 kind: APIServer
