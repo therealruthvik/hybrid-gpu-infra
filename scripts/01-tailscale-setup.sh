@@ -12,6 +12,7 @@ systemctl enable --now tailscaled
 tailscale up \
   --authkey="${TAILSCALE_AUTH_KEY}" \
   --hostname="${HOSTNAME}" \
-  --accept-routes
+  --accept-routes \
+  --reset
 
 echo "Tailscale IP: $(tailscale ip -4)"
