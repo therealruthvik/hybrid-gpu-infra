@@ -3,7 +3,7 @@
 set -euo pipefail
 
 CONTROL_TS_IP=$(tailscale ip -4)
-POD_CIDR="192.168.0.0/16"
+POD_CIDR="10.244.0.0/16"
 SVC_CIDR="10.96.0.0/12"
 
 echo "Initializing control plane at Tailscale IP: ${CONTROL_TS_IP}"
@@ -28,12 +28,8 @@ chown "$(id -u):$(id -g)" "$HOME/.kube/config"
 # Taint control plane — no workload pods ever land here
 kubectl taint nodes control-plane node-role.kubernetes.io/control-plane:NoSchedule --overwrite
 
-# Install Tigera Operator for Calico
-kubectl create -f \
-  https://raw.githubusercontent.com/projectcalico/calico/v3.27.3/manifests/tigera-operator.yaml
-
-# Apply Calico Installation (uses tailscale0 interface for node IP detection)
-kubectl apply -f "$(dirname "$0")/../manifests/calico/installation.yaml"
+# Install Flannel CNI
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 
 echo ""
 echo "=== SAVE THIS JOIN COMMAND FOR THE WORKER NODE ==="
