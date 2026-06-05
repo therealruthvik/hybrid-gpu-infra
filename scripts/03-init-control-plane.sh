@@ -8,13 +8,17 @@ SVC_CIDR="10.96.0.0/12"
 
 echo "Initializing control plane at Tailscale IP: ${CONTROL_TS_IP}"
 
+# Fix hostname resolution (required by kubeadm)
+grep -q "control-plane" /etc/hosts || echo "127.0.0.1 control-plane" >> /etc/hosts
+
 kubeadm init \
   --apiserver-advertise-address="${CONTROL_TS_IP}" \
   --apiserver-cert-extra-sans="${CONTROL_TS_IP}" \
   --pod-network-cidr="${POD_CIDR}" \
   --service-cidr="${SVC_CIDR}" \
   --node-name=control-plane \
-  --skip-phases=addon/kube-proxy
+  --skip-phases=addon/kube-proxy \
+  --ignore-preflight-errors=Mem
 
 # kubeconfig for root + current user
 mkdir -p "$HOME/.kube"
