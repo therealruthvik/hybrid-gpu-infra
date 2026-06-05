@@ -22,8 +22,7 @@ helm repo update
 helm upgrade --install gpu-operator nvidia/gpu-operator \
   --namespace gpu-operator \
   --create-namespace \
-  --values "${REPO_ROOT}/helm/gpu-operator-values.yaml" \
-  --wait --timeout=600s
+  --values "${REPO_ROOT}/helm/gpu-operator-values.yaml"
 
 echo "==> Applying namespaces..."
 kubectl apply -f "${REPO_ROOT}/manifests/00-namespaces.yaml"
@@ -42,24 +41,21 @@ helm repo update
 
 helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
   --namespace observability \
-  --values "${REPO_ROOT}/helm/prometheus-values.yaml" \
-  --wait --timeout=300s
+  --values "${REPO_ROOT}/helm/prometheus-values.yaml"
 
 kubectl apply -f "${REPO_ROOT}/manifests/observability/"
 
 echo "==> Installing ArgoCD..."
 helm upgrade --install argocd argo/argo-cd \
   --namespace argocd \
-  --values "${REPO_ROOT}/helm/argocd-values.yaml" \
-  --wait --timeout=300s
+  --values "${REPO_ROOT}/helm/argocd-values.yaml"
 
 kubectl apply -f "${REPO_ROOT}/manifests/argocd/"
 
 echo "==> Installing Kyverno + GPU policy..."
 helm repo add kyverno https://kyverno.github.io/kyverno
 helm upgrade --install kyverno kyverno/kyverno \
-  --namespace kyverno \
-  --wait --timeout=300s
+  --namespace kyverno
 kubectl apply -f "${REPO_ROOT}/manifests/kyverno/"
 
 echo "==> Applying alert rules..."
