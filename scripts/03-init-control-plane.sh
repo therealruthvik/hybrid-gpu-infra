@@ -17,7 +17,6 @@ kubeadm init \
   --pod-network-cidr="${POD_CIDR}" \
   --service-cidr="${SVC_CIDR}" \
   --node-name=control-plane \
-  --skip-phases=addon/kube-proxy \
   --ignore-preflight-errors=Mem
 
 # kubeconfig for root + current user
