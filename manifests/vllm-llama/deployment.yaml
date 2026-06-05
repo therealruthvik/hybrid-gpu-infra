@@ -1,0 +1,83 @@
+# Stretch: multi-model serving — LLaMA-3-8B-Instruct on same A10
+# Routes: /llama -> this pod (via different service port)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-llama
+  namespace: gpu-workloads
+  labels:
+    app: vllm-llama
+    model: llama-3-8b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-llama
+  template:
+    metadata:
+      labels:
+        app: vllm-llama
+        model: llama-3-8b
+    spec:
+      nodeSelector:
+        node-role: gpu-worker
+      tolerations:
+      - key: "gpu"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      containers:
+      - name: vllm
+        image: vllm/vllm-openai:v0.4.3
+        command: ["python", "-m", "vllm.entrypoints.openai.api_server"]
+        args:
+        - --model
+        - bartowski/Meta-Llama-3-8B-Instruct-GGUF
+        - --quantization
+        - gguf
+        - --gpu-memory-utilization
+        - "0.80"
+        - --max-model-len
+        - "4096"
+        - --host
+        - "0.0.0.0"
+        - --port
+        - "8001"
+        - --served-model-name
+        - llama-3-8b
+        env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-token
+              key: token
+        ports:
+        - name: http
+          containerPort: 8001
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+            memory: "20Gi"
+          requests:
+            nvidia.com/gpu: "1"
+            memory: "14Gi"
+        volumeMounts:
+        - name: model-cache
+          mountPath: /root/.cache/huggingface
+        - name: dshm
+          mountPath: /dev/shm
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 120
+          periodSeconds: 15
+          failureThreshold: 10
+      volumes:
+      - name: model-cache
+        emptyDir:
+          sizeLimit: 25Gi
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Gi

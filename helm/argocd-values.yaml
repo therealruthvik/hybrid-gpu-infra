@@ -1,0 +1,36 @@
+fullnameOverride: argocd
+
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30080
+    nodePortHttps: 30443
+  extraArgs:
+  - --insecure  # TLS terminated at Tailscale layer
+
+configs:
+  params:
+    server.insecure: "true"
+  cm:
+    resource.customizations.health.apps_Deployment: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = ""
+      if obj.status ~= nil then
+        if obj.status.readyReplicas ~= nil and obj.status.readyReplicas == obj.spec.replicas then
+          hs.status = "Healthy"
+        end
+      end
+      return hs
+
+repoServer:
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+applicationSet:
+  enabled: true
+
+notifications:
+  enabled: false

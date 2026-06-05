@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-mistral
+  namespace: gpu-workloads
+  labels:
+    app: vllm-mistral
+    model: mistral-7b-awq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-mistral
+  template:
+    metadata:
+      labels:
+        app: vllm-mistral
+        model: mistral-7b-awq
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      nodeSelector:
+        node-role: gpu-worker
+      tolerations:
+      - key: "gpu"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      containers:
+      - name: vllm
+        image: vllm/vllm-openai:v0.4.3
+        command: ["python", "-m", "vllm.entrypoints.openai.api_server"]
+        args:
+        - --model
+        - TheBloke/Mistral-7B-Instruct-v0.1-AWQ
+        - --quantization
+        - awq
+        - --gpu-memory-utilization
+        - "0.85"
+        - --max-model-len
+        - "4096"
+        - --host
+        - "0.0.0.0"
+        - --port
+        - "8000"
+        - --served-model-name
+        - mistral-7b
+        env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-token
+              key: token
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+            memory: "22Gi"
+            cpu: "4"
+          requests:
+            nvidia.com/gpu: "1"
+            memory: "16Gi"
+            cpu: "2"
+        volumeMounts:
+        - name: model-cache
+          mountPath: /root/.cache/huggingface
+        - name: dshm
+          mountPath: /dev/shm
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 120
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+      volumes:
+      - name: model-cache
+        emptyDir:
+          sizeLimit: 25Gi
+      - name: dshm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Gi

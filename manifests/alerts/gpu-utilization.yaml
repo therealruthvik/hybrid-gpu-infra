@@ -1,0 +1,53 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: gpu-inference-alerts
+  namespace: observability
+  labels:
+    release: prometheus
+spec:
+  groups:
+  - name: gpu.inference
+    interval: 30s
+    rules:
+    # Fire when GPU util drops below 60% while vLLM has active requests
+    - alert: GPUUnderutilizedDuringInference
+      expr: |
+        (
+          DCGM_FI_DEV_GPU_UTIL < 60
+          and
+          vllm:num_requests_running > 0
+        )
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "GPU underutilized during active inference"
+        description: >
+          GPU utilization {{ $value }}% while {{ $labels.job }} has active
+          requests. Expected ≥60%. May indicate model loading stall or
+          batch size too small.
+
+    # Fire when GPU memory > 90% — risk of OOM eviction
+    - alert: GPUMemoryPressure
+      expr: |
+        DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE) > 0.90
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "GPU memory > 90% — OOM risk"
+        description: "GPU {{ $labels.gpu }} memory at {{ $value | humanizePercentage }}."
+
+    # Fire when p95 inference latency exceeds 10s
+    - alert: HighInferenceLatency
+      expr: |
+        histogram_quantile(0.95,
+          sum(rate(vllm:e2e_request_latency_seconds_bucket[5m])) by (le)
+        ) > 10
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "p95 inference latency > 10s"
+        description: "p95 latency is {{ $value | humanizeDuration }}."

@@ -1,0 +1,30 @@
+# Stretch: route /mistral and /llama to different vLLM pods
+# Requires nginx ingress controller installed
+# kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/baremetal/deploy.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: model-router
+  namespace: gpu-workloads
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /mistral(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: vllm-mistral
+            port:
+              number: 8000
+      - path: /llama(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: vllm-llama
+            port:
+              number: 8001

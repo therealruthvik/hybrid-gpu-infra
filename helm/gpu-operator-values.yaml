@@ -1,0 +1,30 @@
+# GPU Operator — driver.enabled=false because Lambda Labs pre-installs NVIDIA drivers
+driver:
+  enabled: false
+
+toolkit:
+  enabled: true
+
+devicePlugin:
+  enabled: true
+
+dcgm:
+  enabled: false  # standalone dcgm-exporter deployed separately
+
+dcgmExporter:
+  enabled: false  # standalone dcgm-exporter deployed separately
+
+gfd:
+  enabled: true   # GPU Feature Discovery — populates node labels
+
+nodeStatusExporter:
+  enabled: true
+
+validator:
+  driver:
+    env:
+    - name: DISABLE_DEV_CHAR_SYMLINK_CREATION
+      value: "true"
+
+operator:
+  defaultRuntime: containerd

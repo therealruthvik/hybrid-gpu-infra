@@ -1,0 +1,50 @@
+fullnameOverride: prometheus
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}
+    serviceMonitorNamespaceSelector: {}
+    podMonitorSelector: {}
+    ruleSelector: {}
+    ruleSelectorNilUsesHelmValues: false
+    additionalScrapeConfigs:
+    - job_name: dcgm-exporter
+      static_configs:
+      - targets: ["dcgm-exporter.observability.svc.cluster.local:9400"]
+
+alertmanager:
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+grafana:
+  enabled: true
+  adminPassword: "changeme"
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: observability
+  service:
+    type: NodePort
+    nodePort: 30300
+
+nodeExporter:
+  enabled: true
+
+kube-state-metrics:
+  enabled: true
